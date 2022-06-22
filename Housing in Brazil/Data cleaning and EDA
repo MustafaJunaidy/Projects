@@ -1,0 +1,155 @@
+#Importing libraries
+import matplotlib.pyplot as plt
+import pandas as pd
+import plotly.express as px
+
+
+                                                                    #DATA CLEANING PART
+#Loading data into a dataframe, df1
+df1 = pd.read_csv("data/brasil-real-estate-1.csv")
+df1.head()
+df1.info() #To look at our columns and their data type.
+
+
+
+#Dropping NaN Values from the dataset. All of these values were located in the lat-lon column.
+df1.dropna(inplace=True)
+
+
+
+#Creating 2 new columns, "lat" and "lon" from the column "lat-lon" by using string split.
+df1[["lat","lon"]] = df1["lat-lon"].str.split(",", expand = True)
+df1.info()
+
+#Converting the data type of "lat", "lon" columns into float since they are numbers.
+df1[["lat","lon"]] =df1[["lat","lon"]].astype(float) 
+df1.info()
+
+
+
+#"price_usd" column is of a string datatype. Also it has unnecessary characters in it that we need to remove to make it a float.
+# Example of an observation in "price_usd" column --> $187,230.25
+df1["price_usd"] = (
+    df1["price_usd"]
+    .str.replace("$", "", regex=False)
+    .str.replace(",","")
+    .astype(float)
+)
+
+
+
+#Creating a new column "state" from the existing column, "place_with_parent_names."
+#Example of an observation in "place_with_parent_names" --> |Brasil|Alagoas|Maceió|
+df1["state"] = df1["place_with_parent_names"].str.split("|", expand = True)[2]
+df1.head()
+
+
+
+#Dropping the columns "lat-lon" and "place_with_parent_names".
+df1.drop(["place_with_parent_names","lat-lon"],axis=1,inplace=True
+
+
+
+
+#Loading data into a dataframe, df2
+df2 = pd.read_csv("data/brasil-real-estate-2.csv")
+df2.head()
+df2.info() #To look at our columns and their data type.
+
+
+
+#Creating a new column "price_usd" by dividng the values in "price_brl" column by 3.19 which was the exchange rate when this data was collected
+# 1USD to 3.19BRL
+df2["price_usd"] = (df2["price_brl"] / 3.19).round(2)
+
+
+
+
+# Dropping "price_brl" column since we will be doing our analysis based on price in usd
+df2.drop(["price_brl"],axis=1,inplace=True)
+
+
+
+
+#Concating the two dataframes, df1 and df2 into a new dataframe df
+df = pd.concat([df1,df2])
+print("df shape:", df.shape)
+
+                                                              #DATA EXPLORATION PART
+                                                              
+
+#Creating a scatter_mapbox graph using latitude and longitude from the "lat", "lon" columns.
+fig = px.scatter_mapbox(
+    df,
+    lat="lat",
+    lon="lon",
+    center={"lat": -14.2, "lon": -51.9},  # Map will be centered on Brazil
+    width=600,
+    height=600,
+    hover_data=["price_usd"],  # Display price when hovering mouse over house
+)
+
+fig.update_layout(mapbox_style="open-street-map")
+
+fig.show()
+
+
+
+#using .describe() to find the summary statistics of the columns "area_m2" and "price_usd"
+summary_stats = df[["area_m2","price_usd"]].describe()
+summary_stats
+
+
+
+
+#Creating a histogram  with price_usd on the x-axis and frequency on the y-axis.
+plt.hist(df["price_usd"])  
+plt.xlabel("Price [USD]")
+plt.ylabel("Frequency")
+plt.title("Distribution of Home Prices");
+
+#Creating a histogram for area_m2
+plt.hist(df["area_m2"])  
+plt.xlabel("Area [sq meters]")
+plt.ylabel("Frequency")
+plt.title("Distribution of Home sizes");
+
+
+
+
+# Using .groupby we are creating a series that finds the mean price_usd of each region in the dataframe df and then we sort them in ascending order. 
+mean_price_by_region = df.groupby("region")["price_usd"].mean().sort_values()
+mean_price_by_region
+
+#Creating a bar chart of mean_price_by_region.
+mean_price_by_region.plot(
+    kind="bar",
+    xlabel="Region",
+    ylabel="Mean Price [USD]",
+    title = "Mean House Price by Region"
+    
+    
+ 
+ 
+# We are creating a new series by using the "region" column and finding "south" values.      
+df_south = df[df["region"] == "South"]
+df_south.head()    
+);
+
+
+
+
+#Using value_counts() method we find the number of values of each state in the southern region.
+homes_by_state = df_south["state"].value_counts().head()
+homes_by_state
+
+
+
+
+#Creating a scatterplot to find if there exists any correlation between price_usd and area_m2 in the southern region.
+plt.scatter(x=df_south["area_m2"], y=df_south["price_usd"])
+plt.xlabel("Area [sq meter]")
+plt.ylabel("Price [USD]")
+plt.title("South: Price vs Area");
+
+
